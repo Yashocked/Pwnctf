@@ -68,6 +68,39 @@ inline std::string cyclic(size_t length) {
     return result.substr(0, length);
 }
 
+// ---------- leak base address (buat PIE binary, wajib karena ASLR) ----------
+// Baca /proc/<pid>/maps punya child process yang lagi jalan, cari baris
+// yang match nama binary-nya DAN file-offset "00000000" (segmen pertama,
+// biasanya text segment). Alamat start baris itu = base address run-time.
+// static_offset (dari objdump -t) + base_address = alamat asli di memory.
+inline uint64_t get_base_address(pid_t pid, const std::string &binary_hint) {
+    std::string maps_path = "/proc/" + std::to_string(pid) + "/maps";
+    FILE *fp = fopen(maps_path.c_str(), "r");
+    if (!fp) {
+        perror("fopen /proc/pid/maps");
+        return 0;
+    }
+
+    char line[1024];
+    uint64_t base = 0;
+    uint64_t fallback = 0;
+    while (fgets(line, sizeof(line), fp)) {
+        if (strstr(line, binary_hint.c_str()) == nullptr) continue;
+
+        uint64_t start = 0, offset = 0;
+        char perms[8] = {0};
+        // format: start-end perms offset dev inode path
+        if (sscanf(line, "%lx-%*x %7s %lx", &start, perms, &offset) == 3) {
+            if (fallback == 0) fallback = start; // simpan match pertama sbg cadangan
+            if (offset == 0) { base = start; break; } // segmen pertama (file offset 0)
+        }
+    }
+    fclose(fp);
+
+    if (base == 0) base = fallback; // kalau gak ketemu offset 0, pake match pertama
+    return base;
+}
+
 // ---------- I/O channel: bisa local process atau remote socket ----------
 class Tube {
 public:
