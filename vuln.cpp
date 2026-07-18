@@ -2,9 +2,14 @@
 // Sengaja dibikin rentan buat belajar exploit dev. JANGAN dipakai di server production.
 //
 // Compile dengan proteksi berbeda-beda buat latihan (lihat build.sh):
-//   g++ -no-pie -fno-stack-protector -z execstack -o vuln_easy vuln.cpp   // paling gampang
-//   g++ -no-pie -fno-stack-protector -o vuln_canary_off vuln.cpp         // no canary, PIE off
-//   g++ -o vuln_full vuln.cpp                                             // full protection (default modern gcc)
+//   TERMUX/ANDROID (no -no-pie, karena Android enforce PIE):
+//     g++ -fno-stack-protector -z execstack -o vuln_easy vuln.cpp    // paling gampang
+//     g++ -fno-stack-protector -o vuln_nopie vuln.cpp                 // no canary
+//     g++ -fstack-protector -o vuln_canary vuln.cpp                   // canary on
+//     g++ -fstack-protector-all -o vuln_full vuln.cpp                 // full protection
+//
+//   LEGACY (x86_64 Linux, pake build.sh untuk backward compatibility):
+//     g++ -no-pie -fno-stack-protector -z execstack -o vuln_easy vuln.cpp
 //
 // Menu ini sengaja punya beberapa bug class sekaligus:
 //   1. Stack buffer overflow klasik (gets/strcpy)
@@ -23,7 +28,7 @@ size_t heap_size = 0;
 void banner() {
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stdin, NULL, _IONBF, 0);
-    puts("=== vuln.cpp — pwn practice target ===");
+    puts("=== vuln.cpp — pwn practice target (Termux/ARM64 Compatible) ===");
 }
 
 // gets() sudah dihapus dari libc modern, jadi kita bikin ulang manual
@@ -93,6 +98,10 @@ void vuln_uaf() {
 // jadi kalau nyari simbol pake `nm`/`objdump` dan hasilnya nama aneh kayak
 // "_Z3winv", itu normal — tinggal pake nama mangled itu apa adanya
 // (atau `c++filt` buat demangle: `echo _Z3winv | c++filt`).
+// 
+// NOTE TERMUX/ARM64: Fungsi ini akan mendapatkan alamat berbeda tergantung architecture,
+// tapi exploit.cpp akan resolve alamat secara dinamis menggunakan objdump, jadi
+// gak perlu hardcode. Teknik ini compatible di ARM64 Android dan x86_64 Linux.
 extern "C" void win() {
     puts("[win] WOW kamu berhasil redirect execution ke sini!");
     system("/bin/sh");
