@@ -30,14 +30,21 @@ pkg install -y python binutils gdb file
 echo "[*] Upgrading pip, setuptools, and wheel..."
 python -m pip install --upgrade pip setuptools wheel
 
-# Step 6: Install pwntools with BINARY WHEELS ONLY (no compilation)
+# Step 6a: Pre-install capstone independently (CRITICAL FIX for Android)
+# This resolves the "no matching distributions" error
+echo "[*] Pre-installing capstone (dependency of pwntools)..."
+pip install --only-binary :all: capstone 2>/dev/null || {
+    echo "[!] Binary capstone unavailable, attempting from source..."
+    pip install capstone || echo "[!] capstone installation failed - proceeding anyway"
+}
+
+# Step 6b: Install pwntools with BINARY WHEELS ONLY (no compilation)
 # This prevents psutil "platform android is not supported" error
 echo "[*] Installing pwntools (binary wheels only - no compile)..."
 pip install --only-binary :all: pwntools
 
 if [ $? -ne 0 ]; then
-    echo "[!] pwntools binary wheel installation failed. Trying with pre-built dependencies..."
-    pip install --only-binary :all: psutil capstone
+    echo "[!] pwntools binary wheel installation failed. Trying alternative approach..."
     pip install pwntools || echo "[!] pwntools installation incomplete"
 fi
 
@@ -65,6 +72,7 @@ echo "Checking compiler: $(clang --version | head -1)"
 echo "Checking Python: $(python --version)"
 echo "Checking pip packages:"
 pip show pwntools 2>/dev/null | grep Version || echo "  [!] pwntools not found"
+pip show capstone 2>/dev/null | grep Version || echo "  [!] capstone not found"
 pip show ropgadget 2>/dev/null | grep Version || echo "  [!] ropgadget not found"
 
 echo ""
@@ -89,7 +97,8 @@ echo "   $ python exploit_template.py remote"
 echo ""
 echo "========== IMPORTANT NOTES ==========="
 echo "[!] First run might take time as pip downloads binary wheels"
-echo "[!] If psutil fails, run: pip install --only-binary :all: psutil"
+echo "[!] If capstone/psutil fails, run: pip install --only-binary :all: capstone psutil"
 echo "[!] For GDB: ensure tmux is running when using gdb.debug()"
 echo "[!] ARM64 architecture is fully supported (auto-detected)"
+echo "[!] On Termux, some pure-Python dependencies may be slower than compiled versions"
 echo ""
