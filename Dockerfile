@@ -1,7 +1,10 @@
-# Dockerfile — deploy vuln.cpp sebagai soal pwn CTF beneran
+# Dockerfile — deploy vuln.cpp sebagai soal pwn CTF beneran (Server Deployment)
 # Build:  docker build -t pwn-challenge .
 # Run:    docker run -p 1337:1337 pwn-challenge
 # Test:   nc localhost 1337
+#
+# CATATAN: Dockerfile ini untuk SERVER DEPLOYMENT, bukan untuk Termux/Android.
+# Untuk development di Termux, gunakan build.sh langsung di device Android Anda.
 
 FROM ubuntu:22.04
 
@@ -17,8 +20,10 @@ RUN useradd -m -s /bin/bash ctf
 WORKDIR /home/ctf
 
 # Copy source & compile dengan proteksi yang lo mau (ganti sesuai kesulitan soal)
+# TERMUX/ANDROID USERS: Jangan gunakan -no-pie flag! Gunakan build.sh di Termux.
+# Docker container ini adalah untuk production Linux server.
 COPY vuln.cpp .
-RUN g++ -no-pie -fno-stack-protector -z execstack -o chall vuln.cpp \
+RUN g++ -fno-stack-protector -z execstack -o chall vuln.cpp \
     && chown ctf:ctf chall \
     && chmod 755 chall
 
