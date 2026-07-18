@@ -1,11 +1,14 @@
-// pwn_helper.hpp — mini "pwntools" versi C++
+// pwn_helper.hpp — mini "pwntools" versi C++ (Termux/Android Compatible)
 // Buat lo yang mau nulis exploit langsung di C++ (bukan Python).
 // Header-only, tinggal #include "pwn_helper.hpp"
+//
+// TERMUX/ANDROID: File ini 100% compatible dengan ARM64 Termux karena hanya
+// menggunakan POSIX system calls yang tersedia di semua platform Unix/Linux.
 //
 // Fitur:
 //   - connect ke remote (socket) atau spawn local process (pipe)
 //   - send / recvuntil / recvline
-//   - p32/p64/u32/u64 (packing address, little endian)
+//   - p32/p64/u32/u64 (packing address, little endian — architecture-agnostic)
 //   - cyclic pattern generator (buat cari offset overflow)
 //   - interactive() -> jadi kayak nc manual
 
