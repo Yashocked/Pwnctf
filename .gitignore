@@ -1,18 +1,55 @@
-# Binary hasil compile — jangan commit, biar orang compile sendiri
+# Compiled binaries and artifacts
 vuln_easy
 vuln_nopie
 vuln_canary
 vuln_full
-chall
 exploit
 *.o
+*.so
+*.a
 
-# JANGAN PERNAH commit flag asli
-flag.txt
-.env
-
-# Artefak testing lokal
+# Debugging and core dumps
 core
-*.core
+core.*
+.gdb_history
+*.dmp
+*.dump
+
+# Python cache
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment files
+.env
+.env.local
+*.env
+
+# CTF-specific secrets
+flag.txt
+flag
+*.flag
+secret*
+
+# Build artifacts
+build/
+dist/
+*.egg
+
+# Temp files
+*.tmp
+*.temp
+/tmp
+
+# Docker artifacts (keep compose/Dockerfile)
+Dockerfile.backup
+.docker/
