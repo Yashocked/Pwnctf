@@ -1,0 +1,17 @@
+# docker-compose.yml — buat testing deploy soal pwn secara lokal
+# Run:  docker compose up --build
+# Test: nc localhost 1337
+
+services:
+  pwn-challenge:
+    build:
+      context: .
+      args:
+        FLAG: "CTF{contoh_flag_buat_testing_lokal}"  # ganti pas mau deploy beneran
+    ports:
+      - "1337:1337"
+    restart: unless-stopped
+    # batasi resource biar satu koneksi gak bisa fork-bomb / abuse server
+    mem_limit: 256m
+    pids_limit: 50
+    cpus: 0.5

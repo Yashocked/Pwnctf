@@ -1,0 +1,18 @@
+# Binary hasil compile — jangan commit, biar orang compile sendiri
+vuln_easy
+vuln_nopie
+vuln_canary
+vuln_full
+chall
+exploit
+*.o
+
+# JANGAN PERNAH commit flag asli
+flag.txt
+.env
+
+# Artefak testing lokal
+core
+*.core
+__pycache__/
+*.pyc

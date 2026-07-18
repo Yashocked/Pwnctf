@@ -1,0 +1,128 @@
+// vuln.cpp — target latihan pwn CTF (C++)
+// Sengaja dibikin rentan buat belajar exploit dev. JANGAN dipakai di server production.
+//
+// Compile dengan proteksi berbeda-beda buat latihan (lihat build.sh):
+//   g++ -no-pie -fno-stack-protector -z execstack -o vuln_easy vuln.cpp   // paling gampang
+//   g++ -no-pie -fno-stack-protector -o vuln_canary_off vuln.cpp         // no canary, PIE off
+//   g++ -o vuln_full vuln.cpp                                             // full protection (default modern gcc)
+//
+// Menu ini sengaja punya beberapa bug class sekaligus:
+//   1. Stack buffer overflow klasik (gets/strcpy)
+//   2. Format string bug (printf(user_input))
+//   3. Integer overflow -> heap overflow
+//   4. Use-after-free sederhana
+
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <unistd.h>
+
+char *heap_chunk = nullptr;
+size_t heap_size = 0;
+
+void banner() {
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stdin, NULL, _IONBF, 0);
+    puts("=== vuln.cpp — pwn practice target ===");
+}
+
+// gets() sudah dihapus dari libc modern, jadi kita bikin ulang manual
+// yang perilakunya sama persis: baca sampai newline TANPA bound check.
+// Ini tetap classic stack-smashing bug, cuma gak pake nama gets() literal.
+char *unsafe_gets(char *buf) {
+    int c;
+    char *p = buf;
+    while ((c = getchar()) != '\n' && c != EOF) {
+        *p++ = (char)c; // BUG: no bounds check sama sekali
+    }
+    *p = '\0';
+    return buf;
+}
+
+// --- BUG 1: stack buffer overflow ---
+void vuln_stack_overflow() {
+    char buf[64];
+    puts("[stack] Masukin data (rentan overflow):");
+    unsafe_gets(buf); // sengaja tanpa bound check -> classic stack smashing
+    printf("[stack] Kamu masukin: %s\n", buf);
+}
+
+// --- BUG 2: format string ---
+void vuln_format_string() {
+    char buf[128];
+    puts("[fmt] Masukin string (dicetak langsung ke printf):");
+    read(0, buf, sizeof(buf) - 1);
+    printf(buf); // BUG: harusnya printf("%s", buf)
+    puts("");
+}
+
+// --- BUG 3: integer overflow -> heap overflow ---
+void vuln_heap_overflow() {
+    int size;
+    puts("[heap] Masukin ukuran chunk (int, bisa negatif buat overflow):");
+    scanf("%d", &size);
+    getchar();
+
+    heap_size = (size_t)size; // BUG: no bounds check, bisa jadi size_t raksasa
+    heap_chunk = (char *)malloc(heap_size);
+    if (!heap_chunk) {
+        puts("malloc gagal");
+        return;
+    }
+    puts("[heap] Isi datanya:");
+    read(0, heap_chunk, heap_size); // kalau size kecil tapi kita kirim banyak -> overflow
+    printf("[heap] chunk: %s\n", heap_chunk);
+}
+
+// --- BUG 4: use-after-free ---
+void vuln_uaf() {
+    if (!heap_chunk) {
+        puts("[uaf] Belum ada chunk. Alokasi dulu lewat opsi heap.");
+        return;
+    }
+    free(heap_chunk);
+    puts("[uaf] Chunk sudah di-free, tapi pointer masih bisa dipakai (bug!)");
+    puts("[uaf] Masukin data baru ke chunk yang udah kefree:");
+    read(0, heap_chunk, 64); // BUG: write-after-free
+    printf("[uaf] isi sekarang: %s\n", heap_chunk);
+}
+
+// fungsi "rahasia" — target umum buat ret2win
+// extern "C" biar nama simbolnya TETAP "win" (gak di-mangle jadi _Z3winv).
+// PENTING: di soal CTF C++ asli, fungsi kayak gini biasanya TETEP di-mangle,
+// jadi kalau nyari simbol pake `nm`/`objdump` dan hasilnya nama aneh kayak
+// "_Z3winv", itu normal — tinggal pake nama mangled itu apa adanya
+// (atau `c++filt` buat demangle: `echo _Z3winv | c++filt`).
+extern "C" void win() {
+    puts("[win] WOW kamu berhasil redirect execution ke sini!");
+    system("/bin/sh");
+}
+
+void menu() {
+    puts("\nPilih bug yang mau dicoba:");
+    puts("1. Stack buffer overflow");
+    puts("2. Format string bug");
+    puts("3. Heap overflow (integer overflow)");
+    puts("4. Use-after-free");
+    puts("5. Keluar");
+    printf("> ");
+}
+
+int main() {
+    banner();
+    int choice;
+    while (true) {
+        menu();
+        if (scanf("%d", &choice) != 1) break;
+        getchar();
+        switch (choice) {
+            case 1: vuln_stack_overflow(); break;
+            case 2: vuln_format_string(); break;
+            case 3: vuln_heap_overflow(); break;
+            case 4: vuln_uaf(); break;
+            case 5: puts("bye"); return 0;
+            default: puts("gak valid"); break;
+        }
+    }
+    return 0;
+}
