@@ -9,7 +9,7 @@ echo "[*] Install compiler & basic tools..."
 pkg install -y clang python git binutils gdb
 
 echo "[*] Install pip & pwntools..."
-pip install --upgrade pip
+pkg install -y python-pip
 pip install pwntools
 
 echo "[*] Install ROPgadget & ropper (cari ROP gadget)..."
